@@ -19,103 +19,208 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GreetService_Greet_FullMethodName = "/greet.GreetService/Greet"
+	MyService_GetUser_FullMethodName    = "/pb.MyService/GetUser"
+	MyService_ListUsers_FullMethodName  = "/pb.MyService/ListUsers"
+	MyService_UploadLogs_FullMethodName = "/pb.MyService/UploadLogs"
+	MyService_Chat_FullMethodName       = "/pb.MyService/Chat"
 )
 
-// GreetServiceClient is the client API for GreetService service.
+// MyServiceClient is the client API for MyService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type GreetServiceClient interface {
-	Greet(ctx context.Context, in *GreetRequest, opts ...grpc.CallOption) (*GreetResponse, error)
+type MyServiceClient interface {
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[User], error)
+	UploadLogs(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Log, UploadSummary], error)
+	Chat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatMessage], error)
 }
 
-type greetServiceClient struct {
+type myServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewGreetServiceClient(cc grpc.ClientConnInterface) GreetServiceClient {
-	return &greetServiceClient{cc}
+func NewMyServiceClient(cc grpc.ClientConnInterface) MyServiceClient {
+	return &myServiceClient{cc}
 }
 
-func (c *greetServiceClient) Greet(ctx context.Context, in *GreetRequest, opts ...grpc.CallOption) (*GreetResponse, error) {
+func (c *myServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GreetResponse)
-	err := c.cc.Invoke(ctx, GreetService_Greet_FullMethodName, in, out, cOpts...)
+	out := new(GetUserResponse)
+	err := c.cc.Invoke(ctx, MyService_GetUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// GreetServiceServer is the server API for GreetService service.
-// All implementations must embed UnimplementedGreetServiceServer
-// for forward compatibility.
-type GreetServiceServer interface {
-	Greet(context.Context, *GreetRequest) (*GreetResponse, error)
-	mustEmbedUnimplementedGreetServiceServer()
+func (c *myServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[User], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MyService_ServiceDesc.Streams[0], MyService_ListUsers_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ListUsersRequest, User]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
 
-// UnimplementedGreetServiceServer must be embedded to have
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_ListUsersClient = grpc.ServerStreamingClient[User]
+
+func (c *myServiceClient) UploadLogs(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Log, UploadSummary], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MyService_ServiceDesc.Streams[1], MyService_UploadLogs_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[Log, UploadSummary]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_UploadLogsClient = grpc.ClientStreamingClient[Log, UploadSummary]
+
+func (c *myServiceClient) Chat(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[ChatMessage, ChatMessage], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MyService_ServiceDesc.Streams[2], MyService_Chat_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ChatMessage, ChatMessage]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_ChatClient = grpc.BidiStreamingClient[ChatMessage, ChatMessage]
+
+// MyServiceServer is the server API for MyService service.
+// All implementations must embed UnimplementedMyServiceServer
+// for forward compatibility.
+type MyServiceServer interface {
+	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	ListUsers(*ListUsersRequest, grpc.ServerStreamingServer[User]) error
+	UploadLogs(grpc.ClientStreamingServer[Log, UploadSummary]) error
+	Chat(grpc.BidiStreamingServer[ChatMessage, ChatMessage]) error
+	mustEmbedUnimplementedMyServiceServer()
+}
+
+// UnimplementedMyServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedGreetServiceServer struct{}
+type UnimplementedMyServiceServer struct{}
 
-func (UnimplementedGreetServiceServer) Greet(context.Context, *GreetRequest) (*GreetResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Greet not implemented")
+func (UnimplementedMyServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
-func (UnimplementedGreetServiceServer) mustEmbedUnimplementedGreetServiceServer() {}
-func (UnimplementedGreetServiceServer) testEmbeddedByValue()                      {}
+func (UnimplementedMyServiceServer) ListUsers(*ListUsersRequest, grpc.ServerStreamingServer[User]) error {
+	return status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedMyServiceServer) UploadLogs(grpc.ClientStreamingServer[Log, UploadSummary]) error {
+	return status.Errorf(codes.Unimplemented, "method UploadLogs not implemented")
+}
+func (UnimplementedMyServiceServer) Chat(grpc.BidiStreamingServer[ChatMessage, ChatMessage]) error {
+	return status.Errorf(codes.Unimplemented, "method Chat not implemented")
+}
+func (UnimplementedMyServiceServer) mustEmbedUnimplementedMyServiceServer() {}
+func (UnimplementedMyServiceServer) testEmbeddedByValue()                   {}
 
-// UnsafeGreetServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to GreetServiceServer will
+// UnsafeMyServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MyServiceServer will
 // result in compilation errors.
-type UnsafeGreetServiceServer interface {
-	mustEmbedUnimplementedGreetServiceServer()
+type UnsafeMyServiceServer interface {
+	mustEmbedUnimplementedMyServiceServer()
 }
 
-func RegisterGreetServiceServer(s grpc.ServiceRegistrar, srv GreetServiceServer) {
-	// If the following call pancis, it indicates UnimplementedGreetServiceServer was
+func RegisterMyServiceServer(s grpc.ServiceRegistrar, srv MyServiceServer) {
+	// If the following call pancis, it indicates UnimplementedMyServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&GreetService_ServiceDesc, srv)
+	s.RegisterService(&MyService_ServiceDesc, srv)
 }
 
-func _GreetService_Greet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GreetRequest)
+func _MyService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GreetServiceServer).Greet(ctx, in)
+		return srv.(MyServiceServer).GetUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GreetService_Greet_FullMethodName,
+		FullMethod: MyService_GetUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GreetServiceServer).Greet(ctx, req.(*GreetRequest))
+		return srv.(MyServiceServer).GetUser(ctx, req.(*GetUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// GreetService_ServiceDesc is the grpc.ServiceDesc for GreetService service.
+func _MyService_ListUsers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListUsersRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MyServiceServer).ListUsers(m, &grpc.GenericServerStream[ListUsersRequest, User]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_ListUsersServer = grpc.ServerStreamingServer[User]
+
+func _MyService_UploadLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MyServiceServer).UploadLogs(&grpc.GenericServerStream[Log, UploadSummary]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_UploadLogsServer = grpc.ClientStreamingServer[Log, UploadSummary]
+
+func _MyService_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MyServiceServer).Chat(&grpc.GenericServerStream[ChatMessage, ChatMessage]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MyService_ChatServer = grpc.BidiStreamingServer[ChatMessage, ChatMessage]
+
+// MyService_ServiceDesc is the grpc.ServiceDesc for MyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var GreetService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "greet.GreetService",
-	HandlerType: (*GreetServiceServer)(nil),
+var MyService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "pb.MyService",
+	HandlerType: (*MyServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Greet",
-			Handler:    _GreetService_Greet_Handler,
+			MethodName: "GetUser",
+			Handler:    _MyService_GetUser_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ListUsers",
+			Handler:       _MyService_ListUsers_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "UploadLogs",
+			Handler:       _MyService_UploadLogs_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Chat",
+			Handler:       _MyService_Chat_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "greet.proto",
 }

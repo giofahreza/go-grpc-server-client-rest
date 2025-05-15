@@ -1,17 +1,38 @@
 syntax = "proto3";
 
-package greet;
+package pb;
 
-option go_package = "/pb";
+option go_package = "grpc-example/pb";
 
-service GreetService {
-  rpc Greet(GreetRequest) returns (GreetResponse);
+message GetUserRequest {
+  int32 id = 1;
 }
 
-message GreetRequest {
-  string name = 1;
+message GetUserResponse {
+  string username = 1;
 }
 
-message GreetResponse {
-  string result = 1;
+message User {
+  string username = 1;
+}
+
+message ListUsersRequest {}
+
+message Log {
+  string message = 1;
+}
+
+message UploadSummary {
+  int32 count = 1;
+}
+
+message ChatMessage {
+  string text = 1;
+}
+
+service MyService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (stream User);
+  rpc UploadLogs(stream Log) returns (UploadSummary);
+  rpc Chat(stream ChatMessage) returns (stream ChatMessage);
 }

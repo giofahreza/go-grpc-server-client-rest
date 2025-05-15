@@ -1,37 +1,78 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"time"
 
+	"go-grpc-server/helpers"
 	"go-grpc-server/pb"
-	"go-grpc-server/service"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
+type server struct {
+	pb.UnimplementedMyServiceServer
+}
+
+func (*server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
+	return &pb.GetUserResponse{Username: fmt.Sprintf("user-%d", req.Id)}, nil
+}
+
+func (*server) ListUsers(req *pb.ListUsersRequest, stream pb.MyService_ListUsersServer) error {
+	for i := 1; i <= 3; i++ {
+		stream.Send(&pb.User{Username: fmt.Sprintf("user%d", i)})
+		time.Sleep(time.Second * 1)
+	}
+	return nil
+}
+
+func (*server) UploadLogs(stream pb.MyService_UploadLogsServer) error {
+	count := 0
+	for {
+		_, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&pb.UploadSummary{Count: int32(count)})
+		}
+		if err != nil {
+			return err
+		}
+		count++
+	}
+}
+
+func (*server) Chat(stream pb.MyService_ChatServer) error {
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		response := &pb.ChatMessage{Text: "Echo: " + msg.Text}
+		if err := stream.Send(response); err != nil {
+			return err
+		}
+	}
+}
+
 func main() {
-	// Create a new gRPC server
-	grpcServer := grpc.NewServer()
-
-	// Register the GreetService with the gRPC server
-	pb.RegisterGreetServiceServer(grpcServer, &service.GreetService{})
-
-	// Register reflection service on gRPC server
-	reflection.Register(grpcServer)
-
-	// Start listening for incoming connections
-	listener, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	fmt.Println("Server is running on port :50051...")
-
-	// Serve gRPC server
-	if err := grpcServer.Serve(listener); err != nil {
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(helpers.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(helpers.StreamServerInterceptor()),
+	)
+	pb.RegisterMyServiceServer(s, &server{})
+	log.Println("gRPC server listening on :50051")
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }
