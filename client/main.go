@@ -27,6 +27,7 @@ func main() {
 	client := pb.NewMyServiceClient(conn)
 
 	// Unary
+	// 1 request, 1 response
 	res, err := client.GetUser(context.Background(), &pb.GetUserRequest{Id: 1})
 	if err != nil {
 		log.Fatalf("Error calling GetUser: %v", err)
@@ -34,6 +35,7 @@ func main() {
 	fmt.Println("Unary GetUser:", res.Username)
 
 	// Server streaming
+	// 1 request, multiple response
 	fmt.Println("Server streaming ListUsers:")
 	stream1, err := client.ListUsers(context.Background(), &pb.ListUsersRequest{})
 	if err != nil {
@@ -48,6 +50,7 @@ func main() {
 	}
 
 	// Client streaming
+	// Multiple request, 1 response
 	fmt.Println("Client streaming UploadLogs:")
 	stream2, err := client.UploadLogs(context.Background())
 	if err != nil {
@@ -64,6 +67,7 @@ func main() {
 	fmt.Println("Uploaded logs:", res2.Count)
 
 	// Bidirectional streaming
+	// multiple request, multiple response
 	fmt.Println("Bidirectional streaming Chat:")
 	stream3, err := client.Chat(context.Background())
 	if err != nil {
